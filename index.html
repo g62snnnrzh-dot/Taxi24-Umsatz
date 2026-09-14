@@ -205,13 +205,17 @@ f.value=
 ks.includes(old)?old:"all";
 
 
+/* Einträge nach Datum sortieren:
+   ältestes Datum zuerst */
+
 let v=
 data
 .map((x,i)=>({...x,i}))
 .filter(x=>
 f.value==="all"||
 mk(x.date)===f.value
-);
+)
+.sort((a,b)=>a.date.localeCompare(b.date));
 
 
 let s=0;
@@ -373,6 +377,7 @@ return;
 
 
 data[index].date=neuesDatumISO;
+
 data[index].amount=n;
 
 save();
