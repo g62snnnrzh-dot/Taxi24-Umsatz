@@ -5,15 +5,490 @@
 <link rel="apple-touch-icon" href="app-icon-v2.PNG">
 <link rel="icon" type="image/png" href="app-icon-v2.PNG">
 <title>Taxi24 Umsatz</title>
+
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f2f2f7;font-family:-apple-system,BlinkMacSystemFont,Arial;color:#111}.app{max-width:600px;margin:auto;padding:22px 16px}.card{background:white;border-radius:18px;padding:18px;margin:14px 0}h1{margin:8px 0}.sub,small,label{color:#777}.row{display:flex;gap:8px}input,select{font-size:18px;padding:13px;border:1px solid #ccc;border-radius:12px}input{flex:1}select{width:100%;margin:8px 0 15px}button{border:0;border-radius:12px;padding:13px 16px;background:#07f;color:white;font-weight:600}.danger{width:100%;margin-top:15px;background:white;color:#f33;border:1px solid #fcc}table{width:100%;border-collapse:collapse}th,td{padding:11px 2px;border-bottom:1px solid #eee;text-align:left}th,.num{text-align:right}.del{background:none;color:#f33;padding:3px;font-size:13px}.total{display:flex;justify-content:space-between;margin-top:16px;padding-top:15px;border-top:2px solid #eee}.total strong{font-size:22px}.empty{text-align:center;color:#888;padding:22px}
-</style></head><body><div class="app"><h1>💶 Umsätze</h1><div class="sub">Nur Umsatz eingeben – 50 % werden automatisch berechnet.</div><div class="card"><label>Umsatz</label><div class="row"><input id="a" type="text" inputmode="decimal" placeholder="z. B. 125,00"><button id="add">Hinzufügen</button></div></div><div class="card"><label>Monat anzeigen</label><select id="f"><option value="all">Alle Monate</option></select><table><thead><tr><th>Datum</th><th>Umsatz</th><th>50 %</th><th></th></tr></thead><tbody id="list"></tbody></table><div id="empty" class="empty">Noch keine Umsätze eingetragen.</div><div class="total"><div><small>Gesamtumsatz</small><br><strong id="sum">0,00 €</strong></div><div class="num"><small>Dein Anteil</small><br><strong id="share">0,00 €</strong></div></div><button class="danger" id="clear">Alle Umsätze löschen</button></div></div><script>
-const KEY="umsatz50_v2";let data=[];try{data=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){}if(!Array.isArray(data))data=[];
-const euro=n=>Number(n).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
-const mk=d=>{let x=new Date(d);return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")};
-const mn=k=>{let [y,m]=k.split("-");return new Date(+y,+m-1,1).toLocaleDateString("de-DE",{month:"long",year:"numeric"})};
-function save(){try{localStorage.setItem(KEY,JSON.stringify(data));return true}catch(e){return false}}
-function render(){let f=document.getElementById("f"),old=f.value,ks=[...new Set(data.map(x=>mk(x.date)))].sort().reverse();f.innerHTML='<option value="all">Alle Monate</option>'+ks.map(k=>'<option value="'+k+'">'+mn(k)+'</option>').join("");f.value=ks.includes(old)?old:"all";let v=data.map((x,i)=>({...x,i})).filter(x=>f.value==="all"||mk(x.date)===f.value),s=0,l=document.getElementById("list");l.innerHTML="";v.forEach(x=>{s+=+x.amount;let tr=document.createElement("tr"),d=new Date(x.date).toLocaleDateString("de-DE");tr.innerHTML='<td>'+d+'</td><td class="num">'+euro(x.amount)+'</td><td class="num">'+euro(x.amount*.5)+'</td><td class="num"><button class="del" data-i="'+x.i+'">Löschen</button></td>';l.appendChild(tr)});document.getElementById("empty").style.display=v.length?"none":"block";document.getElementById("sum").textContent=euro(s);document.getElementById("share").textContent=euro(s*.5);document.querySelectorAll(".del").forEach(b=>b.onclick=()=>{data.splice(+b.dataset.i,1);save();render()})}
-function add(){let i=document.getElementById("a"),n=Number(i.value.trim().replace(/\s/g,"").replace(",","."));if(!Number.isFinite(n)||n<=0){i.focus();return}data.unshift({amount:n,date:new Date().toISOString()});if(!save())alert("Speichern ist in diesem Browser nicht möglich.");i.value="";render();i.focus()}
-document.getElementById("add").onclick=add;document.getElementById("a").onkeydown=e=>{if(e.key==="Enter")add()};document.getElementById("f").onchange=render;document.getElementById("clear").onclick=()=>{if(confirm("Wirklich alle Umsätze löschen?")){data=[];save();render()}};render();
-</script></body></html>
+*{box-sizing:border-box}
+body{margin:0;background:#f2f2f7;font-family:-apple-system,BlinkMacSystemFont,Arial;color:#111}
+.app{max-width:600px;margin:auto;padding:22px 16px}
+.card{background:white;border-radius:18px;padding:18px;margin:14px 0}
+h1{margin:8px 0}
+.sub,small,label{color:#777}
+.row{display:flex;gap:8px}
+input,select{font-size:18px;padding:13px;border:1px solid #ccc;border-radius:12px}
+input{flex:1}
+select{width:100%;margin:8px 0 15px}
+button{border:0;border-radius:12px;padding:13px 16px;background:#07f;color:white;font-weight:600}
+.danger{width:100%;margin-top:15px;background:white;color:#f33;border:1px solid #fcc}
+table{width:100%;border-collapse:collapse}
+th,td{padding:11px 2px;border-bottom:1px solid #eee;text-align:left}
+th,.num{text-align:right}
+.del{background:none;color:#f33;padding:3px;font-size:13px}
+.edit{background:none;color:#07f;padding:3px;font-size:13px}
+.total{display:flex;justify-content:space-between;margin-top:16px;padding-top:15px;border-top:2px solid #eee}
+.total strong{font-size:22px}
+.empty{text-align:center;color:#888;padding:22px}
+.date-row{margin-bottom:12px}
+.date-row label{display:block;margin-bottom:6px}
+.date-row input{width:100%}
+.actions{display:flex;gap:8px;justify-content:flex-end}
+</style>
+
+</head><body>
+
+<div class="app">
+
+<h1>💶 Umsätze</h1>
+
+<div class="sub">
+Nur Umsatz eingeben – 50 % werden automatisch berechnet.
+</div>
+
+<div class="card">
+
+<div class="date-row">
+<label>Datum</label>
+<input id="date" type="date">
+</div>
+
+<label>Umsatz</label>
+
+<div class="row">
+<input id="a" type="text" inputmode="decimal" placeholder="z. B. 125,00">
+<button id="add">Hinzufügen</button>
+</div>
+
+</div>
+
+<div class="card">
+
+<label>Monat anzeigen</label>
+
+<select id="f">
+<option value="all">Alle Monate</option>
+</select>
+
+<table>
+<thead>
+<tr>
+<th>Datum</th>
+<th>Umsatz</th>
+<th>50 %</th>
+<th></th>
+</tr>
+</thead>
+
+<tbody id="list"></tbody>
+</table>
+
+<div id="empty" class="empty">
+Noch keine Umsätze eingetragen.
+</div>
+
+<div class="total">
+
+<div>
+<small>Gesamtumsatz</small><br>
+<strong id="sum">0,00 €</strong>
+</div>
+
+<div class="num">
+<small>Dein Anteil</small><br>
+<strong id="share">0,00 €</strong>
+</div>
+
+</div>
+
+<button class="danger" id="clear">
+Alle Umsätze löschen
+</button>
+
+</div>
+</div>
+
+<script>
+
+const KEY="umsatz50_v2";
+
+let data=[];
+
+try{
+data=JSON.parse(localStorage.getItem(KEY)||"[]");
+}catch(e){}
+
+if(!Array.isArray(data))data=[];
+
+
+/* Euro-Format */
+
+const euro=n=>
+Number(n).toLocaleString("de-DE",{
+minimumFractionDigits:2,
+maximumFractionDigits:2
+})+" €";
+
+
+/* Datum für Monatsfilter */
+
+const mk=d=>{
+let x=new Date(d);
+return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0");
+};
+
+
+/* Monatsname */
+
+const mn=k=>{
+let [y,m]=k.split("-");
+return new Date(+y,+m-1,1).toLocaleDateString("de-DE",{
+month:"long",
+year:"numeric"
+});
+};
+
+
+/* Heutiges Datum als YYYY-MM-DD */
+
+function today(){
+
+let d=new Date();
+
+let y=d.getFullYear();
+let m=String(d.getMonth()+1).padStart(2,"0");
+let day=String(d.getDate()).padStart(2,"0");
+
+return y+"-"+m+"-"+day;
+
+}
+
+
+/* Speichern */
+
+function save(){
+
+try{
+
+localStorage.setItem(KEY,JSON.stringify(data));
+return true;
+
+}catch(e){
+
+return false;
+
+}
+
+}
+
+
+/* Anzeige aktualisieren */
+
+function render(){
+
+let f=document.getElementById("f");
+
+let old=f.value;
+
+let ks=[
+...new Set(
+data.map(x=>mk(x.date))
+)
+].sort().reverse();
+
+
+f.innerHTML=
+'<option value="all">Alle Monate</option>'+
+ks.map(k=>
+'<option value="'+k+'">'+mn(k)+'</option>'
+).join("");
+
+
+f.value=
+ks.includes(old)?old:"all";
+
+
+let v=
+data
+.map((x,i)=>({...x,i}))
+.filter(x=>
+f.value==="all"||
+mk(x.date)===f.value
+);
+
+
+let s=0;
+
+let l=document.getElementById("list");
+
+l.innerHTML="";
+
+
+v.forEach(x=>{
+
+s+=Number(x.amount);
+
+
+let tr=document.createElement("tr");
+
+let d=new Date(x.date+"T12:00:00")
+.toLocaleDateString("de-DE");
+
+
+tr.innerHTML=
+
+'<td>'+d+'</td>'+
+
+'<td class="num">'+
+euro(x.amount)+
+'</td>'+
+
+'<td class="num">'+
+euro(x.amount*.5)+
+'</td>'+
+
+'<td class="num">'+
+
+'<div class="actions">'+
+
+'<button class="edit" data-i="'+x.i+'">Bearbeiten</button>'+
+
+'<button class="del" data-i="'+x.i+'">Löschen</button>'+
+
+'</div>'+
+
+'</td>';
+
+
+l.appendChild(tr);
+
+});
+
+
+document.getElementById("empty").style.display=
+v.length?"none":"block";
+
+
+document.getElementById("sum").textContent=
+euro(s);
+
+
+document.getElementById("share").textContent=
+euro(s*.5);
+
+
+/* Löschen */
+
+document.querySelectorAll(".del").forEach(b=>{
+
+b.onclick=()=>{
+
+data.splice(+b.dataset.i,1);
+
+save();
+
+render();
+
+};
+
+});
+
+
+/* Bearbeiten */
+
+document.querySelectorAll(".edit").forEach(b=>{
+
+b.onclick=()=>{
+
+let index=+b.dataset.i;
+
+let entry=data[index];
+
+let neuesDatum=prompt(
+"Datum ändern (TT.MM.JJJJ):",
+new Date(entry.date+"T12:00:00").toLocaleDateString("de-DE")
+);
+
+if(neuesDatum===null)return;
+
+
+/* Datum prüfen */
+
+let parts=neuesDatum.trim().split(".");
+
+if(parts.length!==3){
+
+alert("Bitte Datum im Format TT.MM.JJJJ eingeben.");
+
+return;
+
+}
+
+let day=parts[0].padStart(2,"0");
+let month=parts[1].padStart(2,"0");
+let year=parts[2];
+
+if(
+year.length!==4||
+Number(month)<1||
+Number(month)>12||
+Number(day)<1||
+Number(day)>31
+){
+
+alert("Bitte ein gültiges Datum eingeben.");
+
+return;
+
+}
+
+
+let neuesDatumISO=
+year+"-"+month+"-"+day;
+
+
+let neuerUmsatz=prompt(
+"Umsatz ändern:",
+Number(entry.amount).toLocaleString("de-DE",{
+minimumFractionDigits:2,
+maximumFractionDigits:2
+})
+);
+
+if(neuerUmsatz===null)return;
+
+
+let n=Number(
+neuerUmsatz
+.trim()
+.replace(/\s/g,"")
+.replace(",",".")
+);
+
+
+if(!Number.isFinite(n)||n<=0){
+
+alert("Bitte einen gültigen Umsatz eingeben.");
+
+return;
+
+}
+
+
+data[index].date=neuesDatumISO;
+data[index].amount=n;
+
+save();
+
+render();
+
+};
+
+});
+
+}
+
+
+/* Neuen Umsatz hinzufügen */
+
+function add(){
+
+let i=document.getElementById("a");
+
+let dateInput=document.getElementById("date");
+
+let n=Number(
+i.value
+.trim()
+.replace(/\s/g,"")
+.replace(",",".")
+);
+
+
+if(!Number.isFinite(n)||n<=0){
+
+i.focus();
+
+return;
+
+}
+
+
+let selectedDate=dateInput.value;
+
+
+if(!selectedDate){
+
+selectedDate=today();
+
+}
+
+
+data.unshift({
+
+amount:n,
+
+date:selectedDate
+
+});
+
+
+if(!save()){
+
+alert("Speichern ist in diesem Browser nicht möglich.");
+
+}
+
+
+i.value="";
+
+dateInput.value=today();
+
+render();
+
+i.focus();
+
+}
+
+
+/* Buttons */
+
+document.getElementById("add").onclick=add;
+
+
+document.getElementById("a").onkeydown=e=>{
+
+if(e.key==="Enter")add();
+
+};
+
+
+document.getElementById("f").onchange=render;
+
+
+/* Alle löschen */
+
+document.getElementById("clear").onclick=()=>{
+
+if(confirm("Wirklich alle Umsätze löschen?")){
+
+data=[];
+
+save();
+
+render();
+
+}
+
+};
+
+
+/* Datum beim Start auf heute setzen */
+
+document.getElementById("date").value=today();
+
+
+/* App starten */
+
+render();
+
+</script>
+
+</body></html>
